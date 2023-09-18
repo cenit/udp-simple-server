@@ -17,12 +17,7 @@ You should have received a copy of the GNU General Public License
 along with udp_simple_server. If not, see <http://www.gnu.org/licenses/>.
 ***************************************************************************/
 
-#include <boost/algorithm/string.hpp>
-
 #include "udp_lib.hpp"
-#include "md5.h"
-
-constexpr char SEPARATOR[] = ";";
 
 int main(int argc, char** argv) {
   std::string in_addr, in_port, out_addr, out_port;
@@ -51,10 +46,10 @@ int main(int argc, char** argv) {
   std::cout << "**************************" << std::endl;
   std::cout << "**** BOOST UDP SERVER ****" << std::endl;
   std::cout << "**************************" << std::endl;
-  std::cout << "* in_addr  : " << in_addr << std::endl;
-  std::cout << "* in_port  : " << in_port << std::endl;
-  std::cout << "* out_addr : " << out_addr << std::endl;
-  std::cout << "* out_port : " << out_port << std::endl;
+  std::cout << "* in_addr  : " << in_addr   << std::endl;
+  std::cout << "* in_port  : " << in_port   << std::endl;
+  std::cout << "* out_addr : " << out_addr  << std::endl;
+  std::cout << "* out_port : " << out_port  << std::endl;
   std::cout << "**************************" << std::endl;
 
   // Server connection set up
@@ -65,43 +60,23 @@ int main(int argc, char** argv) {
   boost::system::error_code err;
   int msg_counter = 0;
   std::string message, client_id, text, hash;
+  bool exit = false;
 
-  for (;;) {
-    std::cout << std::endl << "Awaiting message..." << std::endl;
+  while (exit == false) {
+#ifdef _WIN32
+    if (GetAsyncKeyState(VK_ESCAPE))
+#elif __APPLE__
+    if (getc_unlocked(stdin) == 'q')
+#else
+    if (fgetc_unlocked(stdin) == 'q') // da implementare con fgetc_unlocked, questo e' solo un tentativo alla cieca, non so come funzioni!
+#endif
+    {
+      exit = true;
+    }
     // receive message from client
     udp_con.recv(boost::asio::buffer(&buffer[0], buffer.size()), err);
     message = std::string(buffer.data(), udp_con.len_recv);
-    std::cout << "Message #" << ++msg_counter << " received (" << udp_con.len_recv << " bytes) : " << message << std::endl;
-
-    // extract data from message
-    std::vector<std::string> tokens;
-    boost::algorithm::split(tokens, message, boost::algorithm::is_any_of(SEPARATOR), boost::algorithm::token_compress_off);
-    if (tokens.size() == 3) {
-      client_id = tokens[0];
-      text = tokens[1];
-      hash = tokens[2];
-    }
-    else {
-      std::cerr << "ERROR: message format unknown, skipping." << std::endl;
-      std::cerr << "ERROR: content -> " << message << std::endl;
-      continue;
-    }
-
-    // check MD5hash and send ack to client
-    std::string md5string = make_md5hash(text);
-    if (hash == std::string(md5string) || hash == "let_me_pass" ) {
-      std::cout << "Hash match! Sending ACK to client" << std::endl;
-      udp_con.send(std::to_string(udp_con.len_recv));
-    }
-    else {
-      std::cout << "Hash mismatch!" << std::endl;
-      continue;
-    }
-
-    if (text == "REMOTE_SHUTDOWN") {
-      std::cout << "Server remotely closed." << std::endl;
-      break;
-    }
+    std::cout << ++msg_counter << ": " << message << std::endl;
   }
 
   return 0;

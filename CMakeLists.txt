@@ -83,8 +83,6 @@ find_package(Boost COMPONENTS date_time filesystem regex serialization system RE
 add_executable(${CMAKE_PROJECT_NAME}
   "${CMAKE_CURRENT_SOURCE_DIR}/src/udp_simple_ser.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/udp_lib.hpp"
-  "${CMAKE_SOURCE_DIR}/src/md5.cpp"
-  "${CMAKE_SOURCE_DIR}/src/md5.h"
 )
 
 set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CXX_STANDARD 11)
