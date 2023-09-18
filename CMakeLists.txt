@@ -57,7 +57,7 @@ endif()
 set(TOOL_VERSION ${TOOL_MAJOR_VERSION}.${TOOL_MINOR_VERSION}.${TOOL_PATCH_VERSION}.${TOOL_TWEAK_VERSION})
 message(STATUS "TOOL_VERSION: ${TOOL_VERSION}")
 
-project(udp_simple_server VERSION ${TOOL_VERSION})
+project(udp-simple-server VERSION ${TOOL_VERSION})
 
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)

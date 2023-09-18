@@ -1,3 +1,3 @@
-# udp_simple_server
+# udp-simple-server
 
 A simple boost::asio UDP server.
