@@ -1,20 +1,20 @@
-/* Copyright 2016 - Stefano Sinigardi, Alessandro Fabbri */
+/* Copyright 2016-2023 - Stefano Sinigardi, Alessandro Fabbri */
 
 /***************************************************************************
-This file is part of boost_testing.
+This file is part of udp_simple_server.
 
-boost_testing is free software : you can redistribute it and / or modify
+udp_simple_server is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-boost_testing is distributed in the hope that it will be useful,
+udp_simple_server is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with boost_testing. If not, see <http://www.gnu.org/licenses/>.
+along with udp_simple_server. If not, see <http://www.gnu.org/licenses/>.
 ***************************************************************************/
 
 #pragma once
@@ -61,4 +61,3 @@ void MD5_Update(MD5_CTX *, const void *, uint32_t );
 void MD5_Final(unsigned char *, MD5_CTX *);
 
 std::string make_md5hash(std::string);
-

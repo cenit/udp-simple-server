@@ -1,16 +1,12 @@
 {
-  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
-  "name": "boost-testing",
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "udp-simple-server",
   "version": "1.0.0",
-  "homepage": "https://github.com/physycom/boost_testing",
-  "description": "set of minimal example of the Boost libraries adapted to our needs",
+  "homepage": "https://github.com/cenit/udp_simple_server",
+  "description": "a simple boost::asio UDP server.",
   "dependencies": [
     "boost-asio",
-    "boost-date-time",
     "boost-filesystem",
-    "boost-property-tree",
-    "boost-regex",
-    "boost-serialization",
-    "boost-system"
+    "boost-serialization"
   ]
 }

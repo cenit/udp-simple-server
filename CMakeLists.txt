@@ -1,4 +1,7 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required(VERSION 3.16)
+
+option(CMAKE_VERBOSE_MAKEFILE "Create verbose makefile" OFF)
+option(USE_NSIS "Use NSIS to create installer" OFF)
 
 if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET})
   message(STATUS "Setting default vcpkg target triplet to $ENV{VCPKG_DEFAULT_TRIPLET}")
@@ -6,75 +9,141 @@ if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET})
 endif()
 
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+  set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+  set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
   message(STATUS "VCPKG found: $ENV{VCPKG_ROOT}")
   message(STATUS "Using VCPKG integration")
-  message(STATUS "VCPKG_MANIFEST_FEATURES: ${VCPKG_MANIFEST_FEATURES}")
+  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+  if(VCPKG_MANIFEST_FEATURES)
+    message(STATUS "VCPKG_MANIFEST_FEATURES: ${VCPKG_MANIFEST_FEATURES}")
+  endif()
 elseif(DEFINED CMAKE_TOOLCHAIN_FILE)
   message(STATUS "Using toolchain: ${CMAKE_TOOLCHAIN_FILE}")
   if(CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg.cmake")
     message(STATUS "Toolchain uses VCPKG integration")
-    message(STATUS "VCPKG_MANIFEST_FEATURES: ${VCPKG_MANIFEST_FEATURES}")
+    if(VCPKG_MANIFEST_FEATURES)
+      message(STATUS "VCPKG_MANIFEST_FEATURES: ${VCPKG_MANIFEST_FEATURES}")
+    endif()
   endif()
 else()
   message(WARNING "vcpkg not found, toolchain not defined, build might fail")
 endif()
 
-project(boost_testing)
-enable_language(CXX)
-set(CMAKE_CXX_STANDARD 11)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json)
+  file(READ ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json VCPKG_JSON_STRING)
+  string(JSON VERSION_STRING GET ${VCPKG_JSON_STRING} version)
+else()
+  set(VERSION_STRING "0.0.0")
+endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+string(REPLACE "." ";" VERSION_LIST ${VERSION_STRING})
+list(LENGTH VERSION_LIST VERSION_LIST_LENGTH)
+if(VERSION_LIST_LENGTH LESS 2)
+  message(FATAL_ERROR "Tool needs at least major.minor version numbers to properly configure")
+endif()
+list(GET VERSION_LIST 0 TOOL_MAJOR_VERSION)
+list(GET VERSION_LIST 1 TOOL_MINOR_VERSION)
+if(VERSION_LIST_LENGTH GREATER 2)
+  list(GET VERSION_LIST 2 TOOL_PATCH_VERSION)
+else()
+  set(TOOL_PATCH_VERSION 0)
+endif()
+if(VERSION_LIST_LENGTH GREATER 3)
+  list(GET VERSION_LIST 3 TOOL_TWEAK_VERSION)
+else()
+  set(TOOL_TWEAK_VERSION 0)
+endif()
 
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+set(TOOL_VERSION ${TOOL_MAJOR_VERSION}.${TOOL_MINOR_VERSION}.${TOOL_PATCH_VERSION}.${TOOL_TWEAK_VERSION})
+message(STATUS "TOOL_VERSION: ${TOOL_VERSION}")
+
+project(udp_simple_server VERSION ${TOOL_VERSION})
+
+set(default_build_type "Release")
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
+      STRING "Choose the type of build." FORCE)
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}" CACHE PATH "Install prefix" FORCE)
 endif()
 
-set(INSTALL_BIN_DIR      "bin"                     CACHE PATH "Path where exe and dll will be installed")
-set(INSTALL_LIB_DIR      "lib"                     CACHE PATH "Path where lib will be installed")
-set(INSTALL_INCLUDE_DIR  "include"                 CACHE PATH "Path where headers will be installed")
-set(INSTALL_CMAKE_DIR    "share/${PROJECT_NAME}"   CACHE PATH "Path where cmake configs will be installed")
+set(INSTALL_BIN_DIR      "bin"                   CACHE PATH "Path where exe and dll will be installed")
+set(INSTALL_LIB_DIR      "lib"                   CACHE PATH "Path where lib will be installed")
+set(INSTALL_INCLUDE_DIR  "include"               CACHE PATH "Path where headers will be installed ")
+set(INSTALL_CMAKE_DIR    "share/${PROJECT_NAME}" CACHE PATH "Path where cmake configs will be installed")
 
-if(MSVC)
-  add_definitions(-D_SCL_SECURE_NO_WARNINGS)
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-  add_definitions(-D_WIN32_WINNT=0x0501)
-endif()
-
-if(UNIX AND NOT APPLE)
-  find_package(LibRt REQUIRED)
-endif()
-
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
 find_package(Boost COMPONENTS date_time filesystem regex serialization system REQUIRED)
 
-include_directories(${Boost_INCLUDE_DIR})
+add_executable(${CMAKE_PROJECT_NAME}
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/udp_simple_ser.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/udp_lib.hpp"
+  "${CMAKE_SOURCE_DIR}/src/md5.cpp"
+  "${CMAKE_SOURCE_DIR}/src/md5.h"
+)
 
-add_executable(base64               "${CMAKE_SOURCE_DIR}/src/base64.cpp")
-add_executable(parser_json          "${CMAKE_SOURCE_DIR}/src/parser_json.cpp")
-add_executable(parser_xml           "${CMAKE_SOURCE_DIR}/src/parser_xml.cpp")
-add_executable(serialization_binary "${CMAKE_SOURCE_DIR}/src/serialization_binary.cpp" "${CMAKE_SOURCE_DIR}/src/serialization_classes.hpp")
-add_executable(serialization_text   "${CMAKE_SOURCE_DIR}/src/serialization_text.cpp" "${CMAKE_SOURCE_DIR}/src/serialization_classes.hpp")
-add_executable(udp_simple_cli       "${CMAKE_SOURCE_DIR}/src/udp_simple_cli.cpp" "${CMAKE_SOURCE_DIR}/src/udp_lib.hpp"  "${CMAKE_SOURCE_DIR}/src/md5.cpp"  "${CMAKE_SOURCE_DIR}/src/md5.h")
-add_executable(udp_simple_ser       "${CMAKE_SOURCE_DIR}/src/udp_simple_ser.cpp" "${CMAKE_SOURCE_DIR}/src/udp_lib.hpp"  "${CMAKE_SOURCE_DIR}/src/md5.cpp"  "${CMAKE_SOURCE_DIR}/src/md5.h")
+set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CXX_STANDARD 11)
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src> $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/src>)
+target_link_libraries(${CMAKE_PROJECT_NAME}
+  Boost::boost
+  Boost::filesystem
+  Boost::serialization
+  Boost::system
+)
 
-target_link_libraries(base64               ${Boost_LIBRARIES} Threads::Threads)
-target_link_libraries(parser_json          ${Boost_LIBRARIES} Threads::Threads)
-target_link_libraries(parser_xml           ${Boost_LIBRARIES} Threads::Threads)
-target_link_libraries(serialization_binary ${Boost_LIBRARIES} Threads::Threads)
-target_link_libraries(serialization_text   ${Boost_LIBRARIES} Threads::Threads)
-target_link_libraries(udp_simple_cli       ${Boost_LIBRARIES} Threads::Threads)
-target_link_libraries(udp_simple_ser       ${Boost_LIBRARIES} Threads::Threads)
+install(TARGETS ${CMAKE_PROJECT_NAME}
+  RUNTIME DESTINATION "${INSTALL_BIN_DIR}"
+  ARCHIVE DESTINATION "${INSTALL_LIB_DIR}"
+  LIBRARY DESTINATION "${INSTALL_LIB_DIR}"
+)
 
-if(UNIX AND NOT APPLE)
-  target_link_libraries(base64               LIBRT::LIBRT )
-  target_link_libraries(parser_json          LIBRT::LIBRT )
-  target_link_libraries(parser_xml           LIBRT::LIBRT )
-  target_link_libraries(serialization_binary LIBRT::LIBRT )
-  target_link_libraries(serialization_text   LIBRT::LIBRT )
-  target_link_libraries(udp_simple_cli       LIBRT::LIBRT )
-  target_link_libraries(udp_simple_ser       LIBRT::LIBRT )
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+include(InstallRequiredSystemLibraries)
+
+install(
+    PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+    DESTINATION ${INSTALL_BIN_DIR}
+)
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json)
+  file(READ ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json VCPKG_JSON_STRING)
+  string(JSON CPACK_PACKAGE_NAME GET ${VCPKG_JSON_STRING} name)
+  string(JSON CPACK_PACKAGE_HOMEPAGE_URL GET ${VCPKG_JSON_STRING} homepage)
+  string(JSON CPACK_PACKAGE_DESCRIPTION GET ${VCPKG_JSON_STRING} description)
+  #set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE)
+
+  if(UNIX AND NOT APPLE)
+    find_program(LSB_RELEASE_EXEC lsb_release)
+    execute_process(COMMAND ${LSB_RELEASE_EXEC} -is
+        OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(LSB_RELEASE_ID_SHORT STREQUAL "Ubuntu")
+      set(CPACK_GENERATOR "DEB")
+      set(CPACK_DEBIAN_PACKAGE_MAINTAINER "cenit")
+    else()
+      set(CPACK_GENERATOR "RPM")
+    endif()
+  elseif(APPLE)
+      set(CPACK_GENERATOR "DragNDrop")
+  elseif(WIN32)
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
+    if(USE_NSIS)
+      set(CPACK_GENERATOR "NSIS")
+      string(JSON CPACK_NSIS_PACKAGE_NAME GET ${VCPKG_JSON_STRING} name)
+      string(JSON CPACK_NSIS_DISPLAY_NAME GET ${VCPKG_JSON_STRING} name)
+      set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL "ON")
+      set(CPACK_NSIS_MODIFY_PATH OFF) #disable extra page for adding to PATH, because it's broken on Win10+ due to NSIS not supporting MAX_PATH
+    else()
+      set(CPACK_GENERATOR "WIX")
+      set(CPACK_WIX_UPGRADE_GUID "168BCC41-3878-4539-ADAB-5223E8DBA296") # IMPORTANT! It has to be unique for every project!!
+    endif()
+  endif()
+
+  include(CPack)
 endif()
-
-install(TARGETS base64 parser_json parser_xml serialization_binary serialization_text udp_simple_cli udp_simple_ser DESTINATION "${INSTALL_BIN_DIR}")
