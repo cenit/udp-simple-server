@@ -1,4 +1,4 @@
-name: Physycom Continuous Integration
+name: Continuous Integration
 
 on:
   pull_request:
@@ -55,7 +55,13 @@ jobs:
 
     - name: 'Build'
       shell: pwsh
-      run: ${{ github.workspace }}/cmake/build.ps1 -UseVCPKG -DoNotUpdateVCPKG -DisableInteractive -DoNotUpdateTOOL
+      run: ${{ github.workspace }}/cmake/build.ps1 -UseVCPKG -DoNotUpdateVCPKG -DisableInteractive -DoNotUpdateTOOL -BuildInstaller
+
+    - name: Publish artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ github.event.repository.name }}-ubuntu
+        path: build_release/${{ github.event.repository.name }}-*.deb
 
 
   osx-vcpkg:
@@ -95,7 +101,13 @@ jobs:
 
     - name: 'Build'
       shell: pwsh
-      run: ${{ github.workspace }}/cmake/build.ps1 -UseVCPKG -DoNotUpdateVCPKG -DisableInteractive -DoNotUpdateTOOL
+      run: ${{ github.workspace }}/cmake/build.ps1 -UseVCPKG -DoNotUpdateVCPKG -DisableInteractive -DoNotUpdateTOOL -BuildInstaller
+
+    - name: Publish artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ github.event.repository.name }}-macos
+        path: build_release/${{ github.event.repository.name }}-*.dmg
 
 
   win-vcpkg:
@@ -111,7 +123,7 @@ jobs:
 
     - uses: lukka/get-cmake@latest
 
-    - name: 'Setup vcpkg and NuGet artifacts backend'
+    - name: Setup vcpkg and NuGet artifacts backend
       shell: bash
       run: >
         git clone https://github.com/microsoft/vcpkg ;
@@ -130,6 +142,12 @@ jobs:
         setapikey ${{ secrets.BAGET_API_KEY }}
         -Source http://93.49.111.10:5555/v3/index.json
 
-    - name: 'Build'
+    - name: Build
       shell: pwsh
-      run: ${{ github.workspace }}/cmake/build.ps1 -UseVCPKG -DoNotUpdateVCPKG -DisableInteractive -DoNotUpdateTOOL
+      run: ${{ github.workspace }}/cmake/build.ps1 -UseVCPKG -DoNotUpdateVCPKG -DisableInteractive -DoNotUpdateTOOL -BuildInstaller -ForceLocalVCPKG
+
+    - name: Publish artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ github.event.repository.name }}-windows
+        path: build_release/${{ github.event.repository.name }}-*.msi
