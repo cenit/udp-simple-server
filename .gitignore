@@ -30,3 +30,6 @@ include/
 share/
 lib/
 doc/
+
+*.txt
+*.csv

@@ -17,7 +17,6 @@ You should have received a copy of the GNU General Public License
 along with udp-simple-server. If not, see <http://www.gnu.org/licenses/>.
 ***************************************************************************/
 
-#include <iostream>
 
 #ifdef _WIN32
 #if !defined (_WIN32_WINNT)
@@ -39,7 +38,9 @@ public:
   size_t len_recv, len_send;
 
   UDPConnection(boost::asio::io_service& io_service, const std::string& host_recv, const std::string& port_recv, const std::string& host_send, const std::string& port_send)
-    : IoService(io_service), Socket(io_service, udp::endpoint(udp::v4(), 0)) {
+      : IoService(io_service)
+      , Socket(io_service, udp::endpoint(udp::v4(), 0))
+  {
     udp::resolver resolver(IoService);
     udp::resolver::query query_recv(udp::v4(), host_recv, port_recv);
     udp::resolver::query query_send(udp::v4(), host_send, port_send);
@@ -48,7 +49,18 @@ public:
     Socket = udp::socket(io_service, EP_recv);
   }
 
-  ~UDPConnection() {
+  UDPConnection(boost::asio::io_service& io_service, const std::string& host_recv, const std::string& port_recv)
+      : IoService(io_service)
+      , Socket(io_service, udp::endpoint(udp::v4(), 0))
+  {
+    udp::resolver resolver(IoService);
+    udp::resolver::query query_recv(udp::v4(), host_recv, port_recv);
+    EP_recv = *resolver.resolve(query_recv);
+    Socket = udp::socket(io_service, EP_recv);
+  }
+
+  ~UDPConnection()
+  {
     Socket.close();
   }
 

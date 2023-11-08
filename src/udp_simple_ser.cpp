@@ -17,50 +17,68 @@ You should have received a copy of the GNU General Public License
 along with udp-simple-server. If not, see <http://www.gnu.org/licenses/>.
 ***************************************************************************/
 
+#include <iostream>
+#include <fstream>
 #include "udp_lib.hpp"
 
 int main(int argc, char** argv) {
-  std::string in_addr, in_port, out_addr, out_port;
+  std::string in_addr, in_port;
+  in_addr = "192.168.83.1";
+  in_port = "61480";
+  bool log_enabled = false;
+  std::string filename = "";
+  std::ofstream logfile;
 
-  // Command line handling
-  if (argc == 5) {
-    in_addr = argv[1];
-    in_port = argv[2];
-    out_addr = argv[3];
-    out_port = argv[4];
-  }
-  else if (argc == 2 && std::string(argv[1]) == "def") {
-    in_addr = "127.0.0.1";
-    in_port = "11111";
-    out_addr = "127.0.0.1";
-    out_port = "22222";
-  }
-  else {
-    std::cout << "Usage: " << argv[0] << " in_addr in_port out_addr out_port" << std::endl;
-    std::cout << "       " << " Set up UDP server listening on in_addr:in_port and sending ACK message to out_addr:out_port" << std::endl;
-    std::cout << "Usage: " << " def" << std::endl;
-    std::cout << "       " << " Set up default UDP server (listen 127.0.0.1:11111, send ACK 127.0.0.1:22222)" << std::endl;
-    exit(1);
+  if (argc > 1) { /* Parse arguments, if there are arguments supplied */
+    for (int i = 1; i < argc; i++) {
+      if ((argv[i][0] == '-') || (argv[i][0] == '/')) { // switches or options...
+        switch (tolower(argv[i][1])) {
+        case 'p':
+          in_port = argv[++i];
+          break;
+        case 'a':
+          in_addr = argv[++i];
+          break;
+        case 'f':
+          filename = argv[++i];
+          log_enabled = true;
+          break;
+        default: // no match...
+          std::cout << argv[i] << " not recognized" << std::endl;
+          break;
+        }
+      } else {
+        std::cout << argv[i] << " not recognized" << std::endl;
+        break;
+      }
+    }
+  } else {
+    std::cout << "Usage: " << argv[0] << " [-f filename] [-a in_addr] [-p in_port]" << std::endl;
+    std::cout << "       " << " Set up UDP server listening on in_addr:in_port, with  or without log to file enabled" << std::endl;
+    std::cout << "       " << " If not specified, defaults are 192.168.83.1:61480 and log is disabled" << std::endl;
   }
 
   std::cout << "**************************" << std::endl;
-  std::cout << "**** BOOST UDP SERVER ****" << std::endl;
+  std::cout << "****    UDP SERVER    ****" << std::endl;
   std::cout << "**************************" << std::endl;
   std::cout << "* in_addr  : " << in_addr   << std::endl;
   std::cout << "* in_port  : " << in_port   << std::endl;
-  std::cout << "* out_addr : " << out_addr  << std::endl;
-  std::cout << "* out_port : " << out_port  << std::endl;
   std::cout << "**************************" << std::endl;
 
   // Server connection set up
   boost::asio::io_service ioService;
-  UDPConnection udp_con(ioService, in_addr, in_port, out_addr, out_port);
+  UDPConnection udp_con(ioService, in_addr, in_port);
 
   std::array<char, 512> buffer;
   boost::system::error_code err;
   int msg_counter = 0;
   std::string message, client_id, text, hash;
   bool exit = false;
+
+  if (log_enabled) {
+    std::cout << "Writing all received data also to file " << filename << std::endl;
+    logfile.open(filename, std::ios_base::app);
+  }
 
   while (exit == false) {
 #ifdef _WIN32
@@ -77,7 +95,12 @@ int main(int argc, char** argv) {
     udp_con.recv(boost::asio::buffer(&buffer[0], buffer.size()), err);
     message = std::string(buffer.data(), udp_con.len_recv);
     std::cout << ++msg_counter << ": " << message << std::endl;
+    if (log_enabled)
+      logfile << message << std::endl;
   }
+
+  if (log_enabled)
+    logfile.close();
 
   return 0;
 }
