@@ -65,9 +65,10 @@ int main(int argc, char** argv) {
   std::cout << "* in_port  : " << in_port   << std::endl;
   std::cout << "**************************" << std::endl;
 
-  // Server connection set up
-  boost::asio::io_service ioService;
-  UDPConnection udp_con(ioService, in_addr, in_port);
+  if (log_enabled) {
+    std::cout << "Writing all received data also to file " << filename << std::endl;
+    logfile.open(filename, std::ios_base::app);
+  }
 
   std::array<char, 512> buffer;
   boost::system::error_code err;
@@ -75,28 +76,31 @@ int main(int argc, char** argv) {
   std::string message, client_id, text, hash;
   bool exit = false;
 
-  if (log_enabled) {
-    std::cout << "Writing all received data also to file " << filename << std::endl;
-    logfile.open(filename, std::ios_base::app);
-  }
-
-  while (exit == false) {
+  // Server connection set up
+  boost::asio::io_service ioService;
+  try {
+    UDPConnection udp_con(ioService, in_addr, in_port);
+    while (exit == false) {
 #ifdef _WIN32
-    if (GetAsyncKeyState(VK_ESCAPE))
+      if (GetAsyncKeyState(VK_ESCAPE))
 #elif __APPLE__
-    if (getc_unlocked(stdin) == 'q')
+      if (getc_unlocked(stdin) == 'q')
 #else
-    if (fgetc_unlocked(stdin) == 'q') // da implementare con fgetc_unlocked, questo e' solo un tentativo alla cieca, non so come funzioni!
+      if (fgetc_unlocked(stdin) == 'q') // da implementare con fgetc_unlocked, questo e' solo un tentativo alla cieca, non so come funzioni!
 #endif
-    {
-      exit = true;
+      {
+        exit = true;
+      }
+      // receive message from client
+      udp_con.recv(boost::asio::buffer(&buffer[0], buffer.size()), err);
+      message = std::string(buffer.data(), udp_con.len_recv);
+      std::cout << ++msg_counter << ": " << message << std::endl;
+      if (log_enabled)
+        logfile << message << std::endl;
     }
-    // receive message from client
-    udp_con.recv(boost::asio::buffer(&buffer[0], buffer.size()), err);
-    message = std::string(buffer.data(), udp_con.len_recv);
-    std::cout << ++msg_counter << ": " << message << std::endl;
-    if (log_enabled)
-      logfile << message << std::endl;
+  } catch (std::exception& e) {
+    std::cerr << e.what() << std::endl;
+    return 1;
   }
 
   if (log_enabled)
